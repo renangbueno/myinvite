@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QR Codes</title>
+  <style>
+    body {
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #f7f9fc;
+      margin: 0;
+      padding: 0;
+      color: #333;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 600px;
+      width: 90%;
+      background: #fff;
+      padding: 30px 20px;
+      border-radius: 12px;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+      text-align: center;
+    }
+
+    h1 {
+      font-size: 26px;
+      margin-bottom: 15px;
+      color: #1a3d6e;
+    }
+
+    h2 {
+      font-size: 18px;
+      margin: 15px 0;
+      color: #444;
+    }
+
+    .qr-box {
+      border: 1px solid #ddd;
+      padding: 15px;
+      display: inline-block;
+      border-radius: 8px;
+      background: #fafafa;
+    }
+
+    .qr-box img {
+      width: 100%;
+      max-width: 280px;
+      height: auto;
+    }
+
+    p.note {
+      margin-top: 15px;
+      font-size: 14px;
+      color: #777;
+    }
+
+    .buttons {
+      margin-top: 20px;
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .buttons button {
+      padding: 12px 20px;
+      font-size: 15px;
+      font-weight: bold;
+      color: #fff;
+      background: #1a3d6e;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+
+    .buttons button:hover {
+      background: #153259;
+    }
+
+    /* Responsividade */
+    @media (max-width: 480px) {
+      h1 {
+        font-size: 22px;
+      }
+
+      h2 {
+        font-size: 16px;
+      }
+
+      .buttons button {
+        flex: 1 1 100%;
+        font-size: 14px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h1>Convite Jantar IGC</h1>
+    <h2>Selecione seu Código de Acesso</h2>
+
+    <div class="qr-box">
+      <img id="qrImage" src="qr1.png" alt="QR Code">
+    </div>
+
+    <p class="note">Use os botões abaixo para trocar entre os QR Codes disponíveis.</p>
+
+    <div class="buttons">
+      <button onclick="trocarQR('qr1.png')">QR 1</button>
+      <button onclick="trocarQR('qr2.png')">QR 2</button>
+      <button onclick="trocarQR('qr3.png')">QR 3</button>
+      <button onclick="trocarQR('qr4.png')">QR 4</button>
+    </div>
+  </div>
+
+  <script>
+    function trocarQR(arquivo) {
+      document.getElementById("qrImage").src = arquivo;
+    }
+  </script>
+</body>
+
+</html>
