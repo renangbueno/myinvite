@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Leitor de QR Code com Controles</title>
+    <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* Contêiner onde o vídeo e o scanner serão injetados */
+        #reader {
+            width: 100%;
+            max-width: 400px;
+            margin-bottom: 20px;
+            border: 1px solid #ccc;
+            /* Borda para visualização */
+        }
+
+        .controles {
+            margin-bottom: 20px;
+        }
+
+        button {
+            padding: 10px 15px;
+            font-size: 16px;
+            margin: 5px;
+            cursor: pointer;
+        }
+
+        #status {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #f0f0f0;
+            border-radius: 5px;
+            font-weight: bold;
+            white-space: pre-wrap;
+            /* Mantém a formatação do texto */
+            text-align: center;
+        }
+
+        /* Estilos para o status */
+        .status-pronto {
+            color: gray;
+        }
+
+        .status-lendo {
+            color: green;
+        }
+
+        .status-erro {
+            color: red;
+        }
+
+        /* Estilo do modal fixo no rodapé */
+        #modal {
+            position: fixed;
+            left: 50%;
+            bottom: 20px;
+            transform: translateX(-50%) translateY(30px);
+            /* começa deslocado */
+            width: 90%;
+            max-width: 600px;
+            background: #fff;
+            border-radius: 12px 12px 0 0;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+            padding: 20px;
+            opacity: 0;
+            pointer-events: none;
+            /* evita clique quando escondido */
+            transition: opacity 0.8s ease, transform 0.8s ease;
+            display: none;
+            /* oculto por padrão */
+        }
+
+        #modal.active {
+            bottom: 20px;
+            /* sobe do rodapé */
+            opacity: 1;
+            display: block;
+            /* só aparece quando ativo */
+            opacity: 1;
+            pointer-events: auto;
+            transform: translateX(-50%) translateY(0);
+            /* sobe suavemente */
+        }
+
+        .modal-header {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 12px;
+            color: #333;
+        }
+
+        #modal-data {
+            background: #f1f3f6;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 14px;
+            color: #444;
+            max-height: 150px;
+            overflow-y: auto;
+            white-space: pre-line;
+            /* preserva \n */
+        }
+
+        .modal-buttons {
+            margin-top: 15px;
+            text-align: right;
+        }
+
+
+        button {
+            padding: 10px 18px;
+            margin-left: 10px;
+            cursor: pointer;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: transform 0.2s ease, opacity 0.2s ease;
+        }
+
+        button:hover {
+            transform: scale(1.05);
+            opacity: 0.9;
+        }
+
+        .approve {
+            background: #28a745;
+            color: #fff;
+        }
+
+        .deny {
+            background: #dc3545;
+            color: #fff;
+        }
+    </style>
+</head>
+
+<body>
+    <h2>Leitor de QR Code com Controles</h2>
+
+    <div id="reader"></div>
+
+    <div class="controles">
+        <button id="iniciarBtn">Iniciar Leitura</button>
+        <button id="pararBtn" disabled>Parar Leitura</button>
+    </div>
+    <button onclick="showModal(jsonRecebido);">testeee</button>
+    <div id="status" class="status-pronto">Pronto. Clique em Iniciar Leitura.</div>
+
+    <div id="modal">
+        <div class="modal-header">Confirmar convidado <button onclick="closeModal();">Close</button></div>
+        <pre id="modal-data"></pre>
+        <div class="modal-buttons">
+            <button class="approve" onclick="sendDecision('approve')">✅ APROVAR</button>
+            <button class="deny" onclick="sendDecision('deny')">❌ NEGAR</button>
+        </div>
+    </div>
+    <script>
+        const readerId = "reader";
+        const statusDiv = document.getElementById('status');
+        const iniciarBtn = document.getElementById('iniciarBtn');
+        const pararBtn = document.getElementById('pararBtn');
+
+        const jsonRecebido = {
+            festa_id: 1,
+            convidado_id: 123,
+            convidado_nome: "Ivan Pereira",
+            acompanhante_nome: "Leonardo Garcia",
+            data: "25/11/2025",
+            transporte: false
+        };
+
+        // Cria uma instância da biblioteca
+        const html5QrCode = new Html5Qrcode(readerId);
+
+        // Configuração do scanner
+        const config = {
+            fps: 10,
+            qrbox: {
+                width: 250,
+                height: 250
+            }, // Define o tamanho da caixa de escaneamento
+            // Preferimos a câmera traseira em dispositivos móveis
+            facingMode: "environment"
+        };
+
+        function formatJSONPretty(json) {
+            // Se for string, tenta converter para objeto
+            let obj = typeof json === "string" ? JSON.parse(json) : json;
+
+            // Cria uma div principal
+            const container = document.createElement("div");
+            container.style.fontFamily = "Arial, sans-serif";
+            container.style.fontSize = "14px";
+            container.style.lineHeight = "1.4";
+
+            // Função recursiva para formatar objetos
+            function createList(obj) {
+                const ul = document.createElement("ul");
+                ul.style.listStyle = "none";
+                ul.style.paddingLeft = "15px";
+
+                for (const key in obj) {
+                    const li = document.createElement("li");
+                    const value = obj[key];
+
+                    if (typeof value === "object" && value !== null) {
+                        li.innerHTML = `<strong>${key}:</strong>`;
+                        li.appendChild(createList(value));
+                    } else {
+                        li.innerHTML = `<strong>${key}:</strong> ${value}`;
+                    }
+
+                    ul.appendChild(li);
+                }
+                return ul;
+            }
+
+            container.appendChild(createList(obj));
+            return container.innerHTML;
+        }
+
+        function showModal(data) {
+            // document.getElementById("modal-data").innerHTML = formatJSONPretty(data);
+            // document.getElementById("modal-data").textContent = JSON.stringify(data, null, 2);
+            // document.getElementById("modal").classList.add("active");
+
+            const modalData = document.getElementById("modal-data");
+            modalData.innerHTML = formatJSONPretty(data);
+            document.getElementById("modal").style.display = 'block';
+            document.getElementById("modal").classList.add("active");
+        }
+
+        function closeModal() {
+            document.getElementById("modal").classList.remove("active");
+            setTimeout(() => {
+                document.getElementById("modal").style.display = 'none';
+            }, 300); // espera animação
+        }
+
+        function updateStatus(text, className) {
+            statusDiv.textContent = text;
+            statusDiv.className = className;
+        }
+
+        /** Inicia o processo de escaneamento */
+        function iniciarLeitura() {
+            updateStatus("Iniciando câmera...", 'status-lendo');
+            iniciarBtn.disabled = true;
+            pararBtn.disabled = false;
+
+            html5QrCode.start({
+                        facingMode: "environment"
+                    }, // Usa a câmera traseira
+                    config,
+                    // Callback de Sucesso (QR Code encontrado)
+                    (decodedText, result) => {
+                        updateStatus("QR Code LIDO! Conteúdo: \n" + decodedText, 'status-lendo');
+                        // Opcional: Para a leitura após o primeiro sucesso
+                        // pararLeitura(); 
+                        showModal(decodedText);
+                    },
+                    // Callback de Erro (Erro de escaneamento momentâneo)
+                    (errorMessage) => {
+                        // console.log(`Tentando ler: ${errorMessage}`);
+                        updateStatus("Escaneando... Aponte para um QR Code.", 'status-lendo');
+                    }
+                )
+                .catch(err => {
+                    // Erro fatal (Permissão negada, nenhuma câmera encontrada, etc.)
+                    updateStatus("ERRO: Não foi possível iniciar a câmera. Verifique as permissões ou se há câmeras disponíveis. Detalhe: " + err, 'status-erro');
+                    iniciarBtn.disabled = false;
+                    pararBtn.disabled = true;
+                });
+        }
+
+        /** Para o processo de escaneamento */
+        function pararLeitura() {
+            if (html5QrCode.isScanning) {
+                html5QrCode.stop()
+                    .then(ignore => {
+                        updateStatus("Leitura Parada. Clique em Iniciar para recomeçar.", 'status-pronto');
+                        iniciarBtn.disabled = false;
+                        pararBtn.disabled = true;
+                    })
+                    .catch(err => {
+                        updateStatus("ERRO ao parar o scanner: " + err, 'status-erro');
+                    });
+            } else {
+                updateStatus("O scanner não está ativo.", 'status-pronto');
+                iniciarBtn.disabled = false;
+                pararBtn.disabled = true;
+            }
+        }
+
+        // --- Event Listeners para os Botões ---
+        iniciarBtn.addEventListener('click', iniciarLeitura);
+        pararBtn.addEventListener('click', pararLeitura);
+
+        // Opcional: Tenta iniciar a leitura automaticamente ao carregar
+        window.onload = iniciarLeitura;
+    </script>
+</body>
+
+</html>
